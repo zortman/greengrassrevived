@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Green Grass</title>
+    <style>
+        /* Basic Reset & Styling */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+            color: #ffffff;
+        }
+
+        /* Navigation Header */
+        header {
+            background-color: #1e1e1e;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border-bottom: 1px solid #2d2d2d;
+        }
+
+        .logo-text {
+            font-size: 22px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            color: #00ff88;
+        }
+
+        nav button {
+            background: none;
+            border: none;
+            color: #a0a0a0;
+            font-size: 16px;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        nav button:hover, nav button.active {
+            color: #00ff88;
+            border-bottom: 2px solid #00ff88;
+        }
+
+        /* Content Sections */
+        .tab-content {
+            display: none;
+            padding: 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Grid Layout for Games List */
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .game-card {
+            background-color: #1e1e1e;
+            border-radius: 6px;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+            border: 1px solid #2d2d2d;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .game-card:hover {
+            transform: translateY(-2px);
+            border-color: #00ff88;
+        }
+
+        .game-logo {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 4px;
+            background-color: #2d2d2d;
+            margin-bottom: 12px;
+            border: 1px solid #404040;
+        }
+
+        .game-card h3 {
+            margin: 0 0 6px 0;
+            font-size: 16px;
+            color: #00ff88;
+        }
+
+        .game-card p {
+            margin: 0;
+            font-size: 12px;
+            color: #a0a0a0;
+        }
+
+        /* Arcade Stage for Playing Games */
+        #arcade-stage {
+            display: none;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 20px;
+        }
+
+        #game-frame {
+            width: 100%;
+            max-width: 960px;
+            height: 600px;
+            border: 1px solid #2d2d2d;
+            border-radius: 6px;
+            background-color: #000000;
+        }
+
+        .back-btn {
+            background-color: #2d2d2d;
+            color: #ffffff;
+            border: 1px solid #404040;
+            padding: 8px 16px;
+            font-size: 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .back-btn:hover {
+            background-color: #404040;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-text">[ Green Grass ]</div>
+        <nav>
+            <button class="nav-link active" onclick="switchTab('home')">Home</button>
+            <button class="nav-link" onclick="switchTab('games')">Games</button>
+        </nav>
+    </header>
+
+    <!-- Home Tab Content -->
+    <div id="home" class="tab-content active">
+        <h1>Welcome to Green Grass</h1>
+        <p>This platform acts as an engine for web-accessible HTML5 applications. This file can be run locally on your machine while directly fetching application assets from our cloud repository database.</p>
+    </div>
+
+    <!-- Games Tab Content -->
+    <div id="games" class="tab-content">
+        <!-- Game Selection Screen -->
+        <div id="games-menu">
+            <h1>System Catalog</h1>
+            <div id="catalog-grid" class="games-grid">
+                <!-- 50 Games are generated here automatically via JavaScript -->
+            </div>
+        </div>
+
+        <!-- Inline Game Player Interface -->
+        <div id="arcade-stage">
+            <button class="back-btn" onclick="closeGame()">&#x2190; Return to Catalog</button>
+            <h2 id="current-game-title">Game Title</h2>
+            <iframe id="game-frame" src="" frameborder="0" allowfullscreen></iframe>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURATION: Replace these with your exact GitHub information
+        const GITHUB_USERNAME = "zortman";
+        const REPO_NAME = "greengrassrevived";
+        
+        // Base URLs linking to your live GitHub Pages assets
+        const REPO_BASE_URL = `https://${GITHUB_USERNAME}.github.io/${REPO_NAME}/games/`;
+        const LOGO_BASE_URL = `https://${GITHUB_USERNAME}.github.io/${REPO_NAME}/gamelogos/`;
+
+        // Automatically build and insert 50 placeholder game elements into the grid
+        function generateCatalog() {
+            const grid = document.getElementById('catalog-grid');
+            let htmlBuffer = "";
+
+            for (let i = 1; i <= 50; i++) {
+                const gameFilename = `game${i}.html`;
+                const logoFilename = `game${i}.png`;
+                const gameTitle = `Prototype Game ${i}`;
+                const completeLogoUrl = LOGO_BASE_URL + logoFilename;
+
+                htmlBuffer += `
+                    <div class="game-card" onclick="playGame('${gameFilename}', '${gameTitle}')">
+                        <img class="game-logo" src="${completeLogoUrl}" alt="[ Graphic ]" onerror="this.style.backgroundColor='#333';">
+                        <h3>// App Code ${i}</h3>
+                        <p>Initialize testing interface parameters for matrix instance ${i}.</p>
+                    </div>
+                `;
+            }
+            grid.innerHTML = htmlBuffer;
+        }
+
+        // Tab switching logic (Home vs Games)
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+
+            if (tabId === 'games') {
+                closeGame();
+            }
+        }
+
+        // Load game source from the remote repository URL into the frame
+        function playGame(gameFilename, gameTitle) {
+            const completeGameUrl = REPO_BASE_URL + gameFilename;
+            
+            document.getElementById('games-menu').style.display = 'none';
+            document.getElementById('arcade-stage').style.display = 'flex';
+            document.getElementById('current-game-title').innerText = gameTitle;
+            document.getElementById('game-frame').src = completeGameUrl;
+        }
+
+        // Reset frame state and wipe process tracking
+        function closeGame() {
+            document.getElementById('games-menu').style.display = 'block';
+            document.getElementById('arcade-stage').style.display = 'none';
+            document.getElementById('game-frame').src = '';
+        }
+
+        // Initialize grid build on page load
+        generateCatalog();
+    </script>
+</body>
+</html>
+
