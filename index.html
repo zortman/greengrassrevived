@@ -162,7 +162,7 @@
         <div id="games-menu">
             <h1>System Catalog</h1>
             <div id="catalog-grid" class="games-grid">
-                <!-- 50 Games are generated here automatically via JavaScript -->
+                <!-- Loaded dynamically by the script engine -->
             </div>
         </div>
 
@@ -179,26 +179,46 @@
         const GITHUB_USERNAME = "zortman";
         const REPO_NAME = "greengrassrevived";
         
-        // Base URLs linking to your live GitHub Pages assets
+        // Asset Path Setup
         const REPO_BASE_URL = `https://${GITHUB_USERNAME}.github.io/${REPO_NAME}/games/`;
         const LOGO_BASE_URL = `https://${GITHUB_USERNAME}.github.io/${REPO_NAME}/gamelogos/`;
+        const CONFIG_SCRIPT_URL = `https://${GITHUB_USERNAME}.github.io/${REPO_NAME}/config.js`;
 
-        // Automatically build and insert 50 placeholder game elements into the grid
+        // Load the config.js database file safely over the web architecture
+        function loadConfigAndBuild() {
+            const script = document.createElement('script');
+            script.src = CONFIG_SCRIPT_URL;
+            script.onload = () => {
+                generateCatalog();
+            };
+            script.onerror = () => {
+                console.warn("Could not load cloud config.js database file. Using system fallback naming mechanics.");
+                window.GAME_DATABASE = {}; 
+                generateCatalog();
+            };
+            document.head.appendChild(script);
+        }
+
+        // Build grid layout items mapping from config database records
         function generateCatalog() {
             const grid = document.getElementById('catalog-grid');
             let htmlBuffer = "";
+            const db = window.GAME_DATABASE || {};
 
             for (let i = 1; i <= 50; i++) {
                 const gameFilename = `game${i}.html`;
                 const logoFilename = `game${i}.png`;
-                const gameTitle = `Prototype Game ${i}`;
                 const completeLogoUrl = LOGO_BASE_URL + logoFilename;
 
+                // Grab custom values if they exist, or build fallback values dynamically
+                const gameTitle = (db[i] && db[i].title) ? db[i].title : `Prototype Game ${i}`;
+                const gameDesc = (db[i] && db[i].description) ? db[i].description : `Initialize testing interface parameters for matrix instance ${i}.`;
+
                 htmlBuffer += `
-                    <div class="game-card" onclick="playGame('${gameFilename}', '${gameTitle}')">
+                    <div class="game-card" onclick="playGame('${gameFilename}', '${gameTitle.replace(/'/g, "\\'")}')">
                         <img class="game-logo" src="${completeLogoUrl}" alt="[ Graphic ]" onerror="this.style.backgroundColor='#333';">
-                        <h3>// App Code ${i}</h3>
-                        <p>Initialize testing interface parameters for matrix instance ${i}.</p>
+                        <h3>// ${gameTitle}</h3>
+                        <p>${gameDesc}</p>
                     </div>
                 `;
             }
@@ -235,8 +255,8 @@
             document.getElementById('game-frame').src = '';
         }
 
-        // Initialize grid build on page load
-        generateCatalog();
+        // Initialize script logic routine
+        loadConfigAndBuild();
     </script>
 </body>
 </html>
