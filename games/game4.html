@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NEON-FUSE // DETONATOR</title>
+    <style>
+        body { margin:0; background:#180828; color:#fff; font-family: system-ui, sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; overflow:hidden; }
+        #canvas-box { position:relative; background:#0a0314; border: 4px solid #8b5cf6; box-shadow: 0 0 20px rgba(139,92,246,0.3); }
+        canvas { display:block; cursor: crosshair; }
+        #hud { position:absolute; top:15px; left:15px; font-family:monospace; font-size:16px; color:#c084fc; pointer-events:none; }
+        #modal { position:absolute; inset:0; background:rgba(10,3,20,0.92); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; font-family:monospace; padding:20px; }
+        .btn { background:#a78bfa; color:#180828; border:none; padding:12px 32px; font-weight:bold; font-size:16px; cursor:pointer; margin-top:20px; font-family:monospace; }
+        .btn:hover { background:#c084fc; }
+        .hidden { display:none !important; }
+        p { color:#a78bfa; max-width:460px; font-size:14px; line-height:1.4; }
+    </style>
+</head>
+<body>
+    <div id="canvas-box">
+        <canvas id="game" width="750" height="520"></canvas>
+        <div id="hud">REACTED: 0 / 25</div>
+        <div id="modal">
+            <h1 style="color:#c084fc; margin:0 0 10px 0;">NEON-FUSE</h1>
+            <p>You have exactly <b>ONE CLICK</b> per round. Use it wisely.</p>
+            <p>Clicking drops a static core explosion. When passing neon nodes collide with it, they burst, freeze, and spread the fusion explosion outwards.</p>
+            <p>Chain reactions are mandatory. Cascade your initial blast to hit the clearing requirement quota.</p>
+            <button class="btn" id="act-btn">INITIALIZE FUSE</button>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const hud = document.getElementById('hud');
+        const modal = document.getElementById('modal');
+        const actBtn = document.getElementById('act-btn');
+
+        let level = 1;
+        let targets = [5, 12, 22, 35, 48];
+        let totalNodes = [15, 30, 45, 55, 65];
+        let nodes = [];
+        let explosions = [];
+        let clicked = false;
+        let active = false;
+        let roundOverCheckDelay = 0;
+
+        class Node {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.radius = 9;
+                this.color = `hsl(${Math.random() * 360}, 85%, 65%)`;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if(this.x < this.radius || this.x > canvas.width - this.radius) this.vx *= -1;
+                if(this.y < this.radius || this.y > canvas.height - this.radius) this.vy *= -1;
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2); ctx.fill();
+            }
+        }
+
+        function startRound() {
+            nodes = [];
+            explosions = [];
+            clicked = false;
+            active = true;
+            roundOverCheckDelay = 0;
+            
+            let count = totalNodes[Math.min(level - 1, totalNodes.length - 1)];
+            for(let i=0; i<count; i++) {
+                nodes.push(new Node());
+            }
+            updateHud();
+            modal.classList.add('hidden');
+        }
+
+        function updateHud() {
+            let req = targets[Math.min(level - 1, targets.length - 1)];
+            let counts = explosions.filter(e => e.fromNode).length;
+            hud.innerText = `LEVEL: ${level} | BURST QUOTA: ${counts} / ${req}`;
+        }
+
+        canvas.addEventListener('click', (e) => {
+            if(!active || clicked) return;
+            clicked = true;
+            const rect = canvas.getBoundingClientRect();
+            let mx = e.clientX - rect.left;
+            let my = e.clientY - rect.top;
+            
+            explosions.push({ x: mx, y: my, radius: 1, maxRadius: 55, growing: true, fromNode: false });
+        });
+
+        actBtn.addEventListener('click', startRound);
+
+        function update() {
+            if(!active) return;
+
+            nodes.forEach(n => n.update());
+
+            // Handle explosions expand/shrink cycle
+            for(let i = explosions.length - 1; i >= 0; i--) {
+                let e = explosions[i];
+                if (e.growing) {
+                    e.radius += 1.5;
+                    if (e.radius >= e.maxRadius) e.growing = false;
+                } else {
+                    e.radius -= 0.6;
+                    if (e.radius <= 0) {
+                        explosions.splice(i, 1);
+                        continue;
+                    }
+                }
+
+                // Check collision against remaining nodes to propagate chain reaction
+                for(let j = nodes.length - 1; j >= 0; j--) {
+                    let n = nodes[j];
+                    if (Math.hypot(n.x - e.x, n.y - e.y) < e.radius + n.radius) {
+                        explosions.push({ x: n.x, y: n.y, radius: 1, maxRadius: 45, growing: true, fromNode: true });
+                        nodes.splice(j, 1);
+                        updateHud();
+                    }
+                }
+            }
+
+            // Check end condition when active chain stops entirely
+            if (clicked) {
+                roundOverCheckDelay++;
+                if (explosions.length === 0 && roundOverCheckDelay > 30) {
+                    active = false;
+                    evaluateRound();
+                }
+            }
+        }
+
+        function evaluateRound() {
+            let req = targets[Math.min(level - 1, targets.length - 1)];
+            let scored = totalNodes[Math.min(level - 1, totalNodes.length - 1)] - nodes.length;
+
+            if (scored >= req) {
+                level++;
+                modal.querySelector('h1').innerText = "FUSION SUCCESSFUL";
+                modal.querySelector('p').innerText = `Chain depth cleared! Detonated ${scored} cores. Moving to next energy threshold.`;
+                actBtn.innerText = "ENGAGE NEXT CORE";
+            } else {
+                level = 1;
+                modal.querySelector('h1').innerText = "REACTION FAILED";
+                modal.querySelector('p').innerText = `Insufficient chain expansion. You only triggered ${scored} out of the required ${req} points. Core collapsed.`;
+                actBtn.innerText = "RESTART CORE";
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function draw() {
+            ctx.fillStyle = '#0a0314';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            nodes.forEach(n => n.draw());
+
+            explosions.forEach(e => {
+                ctx.save();
+                ctx.globalAlpha = 0.35;
+                ctx.fillStyle = '#a78bfa';
+                ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI*2); ctx.fill();
+                
+                ctx.globalAlpha = 0.8;
+                ctx.strokeStyle = '#c084fc';
+                ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI*2); ctx.stroke();
+                ctx.restore();
+            });
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+        loop();
+    </script>
+</body>
+</html>
